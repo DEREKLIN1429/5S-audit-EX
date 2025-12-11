@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5S-audit EX (重點事項紀錄)</title>
+    <title>5S-audit EX (押出 5S稽核)</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -257,10 +257,10 @@
             text-align: center;
         }
         
-        /* 檢視雲端照片按鈕 (高度縮減) */
+        /* 檢視雲端照片按鈕 (高度縮減 50%) */
         .btn-drive.btn-full-width {
             grid-column: 1 / -1; /* 跨越兩欄 */
-            aspect-ratio: 4 / 1; /* 縮減高度 */
+            aspect-ratio: 4 / 1; /* 縮減高度為寬度的 1/4 (視覺上約 50% 縮減) */
             flex-direction: row; /* 適合長條形，文字水平排版 */
             gap: 15px;
             font-size: 18px;
@@ -309,18 +309,23 @@
         <div class="header">
             <div class="header-btn" onclick="openSettings()" title="Settings (設定)">⚙️</div>
             <div class="header-title">
-                <h2>5S-audit EX<br>重點事項紀錄</h2>
+                <h2>5S-audit EX<br>押出 5S稽核</h2>
             </div>
             <div class="header-btn" onclick="openSettings()" title="Settings (設定)">⚙️</div>
         </div>
 
         <div class="card">
-            <span class="section-title">0. Defect Worker ID (指摘工號/人員)</span>
+            <span class="section-title">0. User ID (使用者 ID) - Auto Saved</span>
+            <input type="text" id="userIdInput" class="modal-input" placeholder="Enter Your ID (請輸入您的ID)">
+        </div>
+
+        <div class="card">
+            <span class="section-title">1. Defect Worker ID (指摘工號/人員)</span>
             <input type="text" id="workerIdInput" class="modal-input" placeholder="Enter Worker ID (請輸入工號)">
         </div>
 
         <div class="card">
-            <span class="section-title">1. Photo (圖片紀錄)</span>
+            <span class="section-title">2. Photo (圖片紀錄)</span>
             <div class="photo-controls">
                 <button class="btn-half btn-cam" onclick="triggerCam()">📷 Camera (拍照)</button>
                 <button class="btn-half btn-gallery" onclick="triggerGallery()">🖼️ Gallery (相簿)</button>
@@ -337,7 +342,7 @@
         </div>
 
         <div class="card" id="note-card">
-            <span class="section-title">2. Note (文字/語音)</span>
+            <span class="section-title">3. Note (文字/語音)</span>
             <textarea id="noteInput" placeholder="After taking a photo, type here or use voice... (拍照後，在此輸入或使用語音)"></textarea>
             
             <div class="voice-copy-controls">
@@ -372,7 +377,7 @@
 
             </div>
 
-        </div>
+            </div>
 
         <div class="footer-btns-grid">
             <button class="btn-main btn-save" id="saveBtn" onclick="saveToCloud()">
@@ -457,9 +462,10 @@
         // 移除登入檢查，直接顯示 App
         showApp();
         loadSettingsToUI();
+        // 載入儲存的 User ID
+        const savedUserId = localStorage.getItem("cfg_userId") || "";
+        document.getElementById('userIdInput').value = savedUserId;
     };
-
-    // 移除 checkLogin() 和 logout() 函式
 
     function showApp() {
         // 移除 document.getElementById('login-screen').style.display = 'none';
@@ -600,7 +606,7 @@
         }
     }
 
-    // ================= 語音功能 (調整按鈕內容) =================
+    // ================= 語音功能 (調整按鈕文字) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
@@ -736,7 +742,7 @@
         document.getElementById('display-timeout').innerText = originalTime;
     }
 
-    // ================= 複製/截圖功能 (已修改) =================
+    // ================= 複製/截圖功能 (修改) =================
 
     // 移除 closeScreenshotModal()
     // 移除 captureScreenArea()
@@ -783,12 +789,18 @@
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const workerId = document.getElementById('workerIdInput').value; 
+        const userId = document.getElementById('userIdInput').value; // 取得 User ID
         
+        // 儲存 User ID 到 LocalStorage
+        if(userId) {
+            localStorage.setItem("cfg_userId", userId);
+        }
+
         const folderId = FIXED_FOLDER_ID;
         const scriptUrl = `https://script.google.com/macros/s/${FIXED_SCRIPT_ID}/exec`;
 
-        if(!processedImageBase64 && !note && !workerId) {
-            alert("Empty! Please take a photo, write a note, or enter Worker ID."); return;
+        if(!processedImageBase64 && !note && !workerId && !userId) {
+            alert("Empty! Please take a photo, write a note, or enter ID."); return;
         }
 
         const btn = document.getElementById('saveBtn');
@@ -799,7 +811,8 @@
             note: note, 
             image: processedImageBase64, 
             folderId: folderId,
-            workerId: workerId 
+            workerId: workerId,
+            userId: userId // 傳送 User ID
         };
 
         fetch(scriptUrl, {
@@ -811,6 +824,7 @@
             showStatus('success', 'Upload Success!', '上傳成功！');
             document.getElementById('noteInput').value = "";
             document.getElementById('workerIdInput').value = ""; 
+            // 注意：不清除 User ID
             processedImageBase64 = "";
             document.getElementById('preview-img').style.display = 'none';
             document.querySelector('.placeholder').style.display = 'block';
